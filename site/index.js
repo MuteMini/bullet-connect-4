@@ -49,9 +49,9 @@ const drawTokens = () => {
             ctx.beginPath();
             ctx.fillStyle = ( token[idx] === Token.Empty )
                 ? GRID_COLOR
-                : (( token[idx] === Token.Red )
-                    ? RED_COLOR
-                    : YELLOW_COLOR
+                : (( token[idx] === Token.Client )
+                    ? YELLOW_COLOR
+                    : RED_COLOR
                 );
             
             ctx.arc(
@@ -65,62 +65,40 @@ const drawTokens = () => {
     }
 };
 
-let userTurn = false;
-let gameOver = false;
-
 canvas.addEventListener("click", event => {
 
-    if( !gameOver ){
+    if( !board.game_won() ){
         const boundRect = canvas.getBoundingClientRect();
 
         const scaleX = canvas.width / boundRect.width;
         const canvasLeft = (event.clientX - boundRect.left) * scaleX;
 
         const col = Math.min( Math.floor( canvasLeft / (TOKEN_RADIUS*2 + PADDING) ), width - 1 );
-        const row = board.take_input( col, (userTurn) ? Token.Red : Token.Yellow );
 
-        drawGrid();
-        drawTokens();
+        board.take_input( col );
+    }
 
-        if( row != board.height() ) {
-            userTurn = !userTurn;
-            
-            if( board.check_win( row, col ) ) {
-                gameOver = true;
+    drawGrid();
+    drawTokens();
 
-                ctx.font = "48px serif";
-                ctx.fillStyle = "#000000";
-                ctx.fillText("SOMEONE WON OMG", canvas.width/2 - 200, canvas.height/2);
-            }
-        }
+    if( board.game_won() ) {
+        ctx.font = "48px serif";
+        ctx.fillStyle = "#F9CCCA";
+        ctx.fillText("SOMEONE WON OMG", canvas.width/2 - 200, canvas.height/2);
     }
 });
 
 const clientTimerDiv = document.getElementById("client-timer");
 const serverTimerDiv = document.getElementById("server-timer");
 
-let gameTime = Date.now();
-
-let clientTime = 5000;
-let serverTime = 5000;
-
 let timerTick = setInterval(() => {
-    if( gameOver ) clearInterval( timerTick );
 
-    let delta = Date.now() - gameTime;
-    gameTime = Date.now();
+    clientTimerDiv.textContent = (board.client_time()/1000.0).toFixed(2).toString();
+    serverTimerDiv.textContent = (board.server_time()/1000.0).toFixed(2).toString();
 
-    if( !userTurn ) clientTime -= delta;
-    else serverTime -= delta;
-
-    if( clientTime < 0 || serverTime < 0 ) {
-        clientTime = clientTime < 0 ? 0 : clientTime;
-        serverTime = serverTime < 0 ? 0 : serverTime;
-        gameOver = true;
-    }
-
-    clientTimerDiv.textContent = (clientTime/1000.0).toFixed(2).toString();
-    serverTimerDiv.textContent = (serverTime/1000.0).toFixed(2).toString();
+    board.tick_time();
+    
+    if( board.game_won() ) clearInterval( timerTick );
 }, 10);
 
 drawGrid();

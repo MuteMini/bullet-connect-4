@@ -3,7 +3,38 @@
   <head>
     <meta charset="utf-8">
     <title>Hello wasm-pack!</title>
-    <style>
+    
+    <!-- must make stuff more responsive later -->
+    <style> 
+      .hud {  
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: black;
+        opacity: 30%;
+      }
+      .popup {
+        width: 30%;
+        height: 200px;
+        background-color: beige;
+        border-radius: 30px;
+        display: none;
+        /*display: grid;*/
+      } 
+      .menu {
+        /*display: grid;*/
+        grid-template-columns: 1fr 2fr 2fr 2fr 1fr;
+        grid-template-rows: 10px 1fr 2fr 4fr 20px; 
+      }
+      .join {}
+      .make {}
+      .wait {}
+      .about {}
       .grid {
         position: absolute;
         top: 0;
@@ -11,13 +42,17 @@
         width: 100%;
         height: 100%;
         display: grid;
-        grid-template-columns: 50px 1fr [timer-body]2fr [canvas-body]5fr 50px;
+        grid-template-columns: 50px 1fr [timer-body]3fr [canvas-body]3fr 1fr 50px;
         grid-template-rows: 50px [body-top]1fr 5fr [body-bot]1fr 50px; 
       }
-      .grid canvas {
+      .grid .canvas {
+        height: 100%;
         grid-column: canvas-body;
         grid-row: body-top / span 3;
         place-self: center start;
+      }
+      canvas {
+        height: 100%;
       }
       .timer {
         place-self: stretch stretch;
@@ -26,19 +61,49 @@
         font-size: 42px;
       }
       .client {
-        grid-row: body-top;
+        grid-row: body-bot;
         background-color: yellow;
       }
       .server {
-        grid-row: body-bot;
+        grid-row: body-top;
         background-color: pink;
       }
     </style>
   </head>
   <body>
     <noscript>This page contains webassembly and javascript content, please enable javascript in your browser.</noscript>
+    <div class="hud">
+      <div class="popup menu" id="menu">
+        <div>
+
+        </div>
+        <button>
+
+        </button>
+        <button>
+
+        </button>
+        <button>
+
+        </button>
+      </div>
+      <div class="popup join" id="menu">
+      
+      </div>
+      <div class="popup make" id="menu">
+      
+      </div>
+      <div class="popup wait" id="menu">
+      
+      </div>
+      <div class="popup about" id="menu">
+      
+      </div>
+    </div>
     <div class="grid">
-      <canvas id="connect-4-canvas" ></canvas>
+      <div class="canvas">
+        <canvas id="connect-4-canvas" ></canvas>
+      </div>
       <div class="timer client" id="client-timer"> </div>
       <div class="timer server" id="server-timer"> </div>
     </div>
