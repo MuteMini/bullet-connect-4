@@ -1,14 +1,20 @@
 use wasm_bindgen::prelude::*;
+use wasm_bindgen::JsCast;
+use std::f64;
+use std::cmp;
 
 extern crate js_sys;
+extern crate web_sys;
 
 //From https://rustwasm.github.io/docs/book/game-of-life/debugging.html
-extern crate web_sys;
 macro_rules! log {
     ( $( $t:tt )* ) => {
         web_sys::console::log_1(&format!( $( $t )* ).into());
     }
 }
+
+const TOKEN_RADIUS: u32 = 50;
+const PADDING: u32 = 15;
 
 #[wasm_bindgen]
 #[repr(u8)]
@@ -21,19 +27,65 @@ pub enum Token {
 
 #[wasm_bindgen]
 pub struct Board {
-    width: u16,
-    height: u16,
+    width: u32,
+    height: u32,
+
     client_time: i32,
     server_time: i32,
     elapsed: f64,
-    player_token: Token,
+
     game_won: bool,
+    player_token: Token,
     tokens: Vec<Token>,
+
+    canvas_height: u32,
+    canvas_width: u32,
+    context: web_sys::CanvasRenderingContext2d,
 }
 
 #[wasm_bindgen]
-impl Board {
-    pub fn take_input( &mut self, col: u16 ) {
+impl Board {    
+    pub fn draw_game( &self ) {
+        let grid_color: &JsValue = &wasm_bindgen::JsValue::from_str("#0000FF");
+        let empty_color: &JsValue = &wasm_bindgen::JsValue::from_str("#FFFFFF");
+        let red_color: &JsValue = &wasm_bindgen::JsValue::from_str("#FF0000");
+        let yellow_color: &JsValue = &wasm_bindgen::JsValue::from_str("#FFFF00");
+
+        self.context.begin_path();
+        self.context.set_fill_style( grid_color );
+        self.context.rect(0.0, 0.0, self.canvas_width as f64, self.canvas_height as f64);
+        self.context.fill();
+    
+        for row in 0..self.height {
+            for col in 0..self.width {
+                let idx = self.get_index( row, col );
+
+                self.context.begin_path();
+
+                self.context.set_fill_style( 
+                    match self.tokens[idx] {
+                        Token::Client => yellow_color,
+                        Token::Server => red_color,
+                        _ => empty_color,
+                    }
+                );
+                
+                self.context.arc(
+                    (2*col*(TOKEN_RADIUS + PADDING/2) + TOKEN_RADIUS + PADDING/2) as f64,
+                    (self.canvas_height - 2*(row + 1)*(TOKEN_RADIUS + PADDING/2) + TOKEN_RADIUS + PADDING/2) as f64,
+                    TOKEN_RADIUS as f64, 
+                    0.0, f64::consts::PI*2.0
+                ).unwrap();
+
+                self.context.fill();
+            }
+        }
+    }
+
+    pub fn take_input( &mut self, canvas_left: u32 ) {
+        
+        let col = std::cmp::min( ((canvas_left/ (TOKEN_RADIUS*2 + PADDING)) as f64).floor() as u32, self.width - 1 );
+
         for row in 0..self.height {
             let idx = self.get_index( row, col );
 
@@ -76,7 +128,8 @@ impl Board {
         }
     }
 
-    fn check_win( &self, row: u16, col: u16 ) -> bool {      
+
+    fn check_win( &self, row: u32, col: u32 ) -> bool {      
         //Bits represent each dir's # of connected tokens
         let mut concur_cnt: [u8; 4] = [1; 4];
 
@@ -92,8 +145,8 @@ impl Board {
             for dir in 0..8 {
                 let mask = 0b1 << dir;
                 if concur_stop & mask != 0 { 
-                    let mut row_check = row as i16;
-                    let mut col_check = col as i16;
+                    let mut row_check = row as i32;
+                    let mut col_check = col as i32;
 
                     match dir {
                         0..=2 => row_check += diff,
@@ -107,9 +160,9 @@ impl Board {
                         _ => {},
                     }
 
-                    if (row_check < 0 || row_check >= self.height as i16)
-                        || (col_check < 0 || col_check >= self.width as i16) 
-                        || self.tokens[ self.get_index(row_check as u16, col_check as u16) ] != cur_tok {
+                    if (row_check < 0 || row_check >= self.height as i32)
+                        || (col_check < 0 || col_check >= self.width as i32) 
+                        || self.tokens[ self.get_index(row_check as u32, col_check as u32) ] != cur_tok {
                         concur_stop &= !(mask);
                     }
                     else {
@@ -131,47 +184,54 @@ impl Board {
         false
     }
 
-    fn get_index ( &self, row: u16, col: u16 ) -> usize {
+    fn get_index( &self, row: u32, col: u32 ) -> usize {
         (row*self.width + col) as usize
     }
 
     pub fn new() -> Board {
-        let width: u16 = 7;
-        let height: u16 = 6;
+        let width: u32 = 7;
+        let height: u32 = 6;
         
         let tokens = vec![Token::Empty; (width*height) as usize];
 
-        // let tokens = (0..width*height)
-        //     .map(|i| {
-        //         if i % 3 == 0 {
-        //             Token::Empty
-        //         }
-        //         else if i % 3 == 1 {
-        //             Token::Red
-        //         }
-        //         else {
-        //             Token::Yellow
-        //         }
-        //     })
-        //     .collect();
-        
+        let document = web_sys::window().unwrap().document().unwrap();
+        let canvas = document.get_element_by_id("connect-4-canvas").unwrap()
+                .dyn_into::<web_sys::HtmlCanvasElement>()
+                .map_err(|_| ())
+                .unwrap();
+
+        let canvas_width = ((TOKEN_RADIUS*2 + PADDING)*width + 1) as u32;
+        let canvas_height = ((TOKEN_RADIUS*2 + PADDING)*height + 1) as u32;
+
+        canvas.set_width( canvas_width );
+        canvas.set_height( canvas_height );
+       
+        let context: web_sys::CanvasRenderingContext2d = canvas.get_context("2d")
+            .unwrap()
+            .unwrap()
+            .dyn_into::<web_sys::CanvasRenderingContext2d>()
+            .unwrap();
+
         Board {
             width,
             height,
             client_time: 10000,
             server_time: 10000,
             elapsed: js_sys::Date::now(),
-            player_token: Token::Client,
             game_won: false,
+            player_token: Token::Client,
             tokens,
+            canvas_width,
+            canvas_height,
+            context,
         }
     }
 
-    pub fn width( &self ) -> u16 {
+    pub fn width( &self ) -> u32 {
         self.width
     }
 
-    pub fn height( &self ) -> u16 {
+    pub fn height( &self ) -> u32 {
         self.height
     }
 
