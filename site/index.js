@@ -1,10 +1,6 @@
 import { Board, Hud } from "bullet-connect-4";
 
 const board = Board.new();
-const width = board.width();
-
-const TOKEN_RADIUS = 50;
-const PADDING = 15;
 
 //const hud = Hud.new();
 

@@ -1,7 +1,6 @@
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use std::f64;
-use std::cmp;
 
 extern crate js_sys;
 extern crate web_sys;
@@ -46,29 +45,25 @@ pub struct Board {
 #[wasm_bindgen]
 impl Board {    
     pub fn draw_game( &self ) {
-        let grid_color: &JsValue = &wasm_bindgen::JsValue::from_str("#0000FF");
-        let empty_color: &JsValue = &wasm_bindgen::JsValue::from_str("#FFFFFF");
-        let red_color: &JsValue = &wasm_bindgen::JsValue::from_str("#FF0000");
-        let yellow_color: &JsValue = &wasm_bindgen::JsValue::from_str("#FFFF00");
-
         self.context.begin_path();
-        self.context.set_fill_style( grid_color );
+        self.context.set_fill_style( &JsValue::from("#0000FF") );
         self.context.rect(0.0, 0.0, self.canvas_width as f64, self.canvas_height as f64);
         self.context.fill();
-    
+
         for row in 0..self.height {
             for col in 0..self.width {
                 let idx = self.get_index( row, col );
 
+                let tmp;
                 self.context.begin_path();
-
-                self.context.set_fill_style( 
+                self.context.set_fill_style({
                     match self.tokens[idx] {
-                        Token::Client => yellow_color,
-                        Token::Server => red_color,
-                        _ => empty_color,
-                    }
-                );
+                        Token::Client => tmp = JsValue::from("#FFFF00"),
+                        Token::Server => tmp = JsValue::from("#FF0000"),
+                        _ => tmp = JsValue::from("#FFFFFF"),
+                    };
+                    &tmp
+                });
                 
                 self.context.arc(
                     (2*col*(TOKEN_RADIUS + PADDING/2) + TOKEN_RADIUS + PADDING/2) as f64,
@@ -80,10 +75,19 @@ impl Board {
                 self.context.fill();
             }
         }
+
+        if self.game_won {
+            self.context.set_font("48px serif");
+            self.context.set_fill_style( &JsValue::from("#FF00FF") );
+            self.context.fill_text(
+                        "SOMEONE WON OMG", 
+                        (self.canvas_width/2 - 200) as f64, 
+                        (self.canvas_height/2) as f64
+            ).unwrap();
+        }
     }
 
     pub fn take_input( &mut self, canvas_left: u32 ) {
-        
         let col = std::cmp::min( ((canvas_left/ (TOKEN_RADIUS*2 + PADDING)) as f64).floor() as u32, self.width - 1 );
 
         for row in 0..self.height {
@@ -127,7 +131,6 @@ impl Board {
             self.game_won = true
         }
     }
-
 
     fn check_win( &self, row: u32, col: u32 ) -> bool {      
         //Bits represent each dir's # of connected tokens
@@ -205,7 +208,7 @@ impl Board {
 
         canvas.set_width( canvas_width );
         canvas.set_height( canvas_height );
-       
+    
         let context: web_sys::CanvasRenderingContext2d = canvas.get_context("2d")
             .unwrap()
             .unwrap()
@@ -227,14 +230,6 @@ impl Board {
         }
     }
 
-    pub fn width( &self ) -> u32 {
-        self.width
-    }
-
-    pub fn height( &self ) -> u32 {
-        self.height
-    }
-
     pub fn client_time( &self ) -> i32 {
         self.client_time
     }
@@ -243,15 +238,7 @@ impl Board {
         self.server_time
     }
 
-    pub fn player_token( &self ) -> Token {
-        self.player_token
-    } 
-
     pub fn game_won( &self ) -> bool {
         self.game_won
-    }
-
-    pub fn token( &self ) -> *const Token {
-        self.tokens.as_ptr()
     }
 }
