@@ -3,7 +3,7 @@
 version = 3
 
 [[package]]
-name = "bullet-connect-4-server"
+name = "common"
 version = "0.1.0"
 dependencies = [
  "serde",

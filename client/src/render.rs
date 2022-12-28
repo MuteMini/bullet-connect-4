@@ -3,6 +3,8 @@ use wasm_bindgen::JsCast;
 use std::collections::HashMap;
 use std::f64;
 
+use common::{ Token };
+
 extern crate js_sys;
 extern crate web_sys;
 
@@ -50,8 +52,8 @@ impl Board {
                 self.context.begin_path();
                 self.context.set_fill_style({
                     match self.tokens[idx] {
-                        Token::Client => tmp = JsValue::from("#FFFF00"),
-                        Token::Server => tmp = JsValue::from("#FF0000"),
+                        Token::Yellow => tmp = JsValue::from("#FFFF00"),
+                        Token::Red => tmp = JsValue::from("#FF0000"),
                         _ => tmp = JsValue::from("#FFFFFF"),
                     };
                     &tmp
@@ -87,7 +89,7 @@ impl Board {
 
             if self.tokens[idx] == Token::Empty {
                 self.tokens[idx] = self.player_token;
-                self.player_token = if self.player_token == Token::Client { Token::Server } else { Token::Client };
+                self.player_token = if self.player_token == Token::Yellow { Token::Red } else { Token::Yellow };
                 self.game_won = self.check_win( row, col );
                 break;  
             }
@@ -104,10 +106,10 @@ impl Board {
         }
 
         let player_time = match self.player_token {
-            Token::Client => {
+            Token::Yellow => {
                 &mut self.client_time
             },
-            Token::Server => {
+            Token::Red => {
                 &mut self.server_time
             },
             _ => { 
@@ -214,7 +216,7 @@ impl Board {
             server_time: 10000,
             elapsed: js_sys::Date::now(),
             game_won: false,
-            player_token: Token::Client,
+            player_token: Token::Yellow,
             tokens,
             canvas_width,
             canvas_height,

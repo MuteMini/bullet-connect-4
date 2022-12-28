@@ -34,7 +34,7 @@ pub enum GameEvent {
     WonGame { winner: PlayerId },
     PlayerJoined { player_id: PlayerId, name: String },
     PlayerLeft { player_id: PlayerId },
-    PlaceToken { player_id: PlayerId, xPos: usize },
+    PlaceToken { player_id: PlayerId, col: usize },
 }
 
 //Holds the current state of the game
@@ -62,6 +62,7 @@ impl Default for GameState {
     }
 }
 
+/*
 impl GameState {
 
     //This function assumes the GameEvent being passed through is valid.
@@ -128,3 +129,4 @@ impl GameState {
         return Ok(());
     }
 }
+*/
