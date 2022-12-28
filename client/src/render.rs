@@ -1,5 +1,6 @@
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
+use std::collections::HashMap;
 use std::f64;
 
 extern crate js_sys;
@@ -14,15 +15,6 @@ macro_rules! log {
 
 const TOKEN_RADIUS: u32 = 50;
 const PADDING: u32 = 15;
-
-#[wasm_bindgen]
-#[repr(u8)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Token {
-    Empty = 0,
-    Client = 1,
-    Server = 2,
-}
 
 #[wasm_bindgen]
 pub struct Board {

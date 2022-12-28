@@ -14,12 +14,6 @@ canvas.addEventListener("click", event => {
     }
 
     board.draw_game();
-
-    if( board.game_won() ) {
-        ctx.font = "48px serif";
-        ctx.fillStyle = "#F9CCCA";
-        ctx.fillText("SOMEONE WON OMG", canvas.width/2 - 200, canvas.height/2);
-    }
 });
 
 const clientTimerDiv = document.getElementById("client-timer");
