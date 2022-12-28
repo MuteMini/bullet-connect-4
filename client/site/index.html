@@ -1,14 +1,17 @@
 <!DOCTYPE html>
 <html>
+
+  <!-- must make stuff more responsive later -->
+
   <head>
     <meta charset="utf-8">
     <title>Hello wasm-pack!</title>
-    
-    <!-- must make stuff more responsive later -->
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Balsamiq+Sans:ital@1&family=Dosis&display=swap');
     </style>
     <style> 
+
+      /* Future work here for the UI to enter games, type names, etc. */
       .hud {  
         position: absolute;
         top: 0;
@@ -61,6 +64,7 @@
       .make {}
       .wait {}
       .about {}
+      /* Sets up the game board */
       .grid {
         position: absolute;
         top: 0;
@@ -86,6 +90,8 @@
         text-align: center;
         font-size: 42px;
       }
+      /* Client (meaning you) and server (meaning them) timer styles */
+      /* Color is temp. Most important thing is where the timer is placed, which is a future decision. */
       .client {
         grid-row: body-bot;
         background-color: yellow;
@@ -98,6 +104,8 @@
   </head>
   <body>
     <noscript>This page contains webassembly and javascript content, please enable javascript in your browser.</noscript>
+
+    <!-- UI work to be done here. Will be interfaced by rust in the future -->
     <div class="hud" id="hud-menu">
       <div class="popup main" id="hud-main">
         <h2>Bullet Connect 4</h2>
@@ -107,16 +115,12 @@
           <button id="make-button">Make Game</button>
         </div> 
       </div>
-      <div class="popup join" id="hud-join">
-      
-      </div>
-      <div class="popup make" id="hud-make">
-      
-      </div>
-      <div class="popup wait" id="hud-wait">
-      
-      </div>
+      <div class="popup join" id="hud-join"></div>
+      <div class="popup make" id="hud-make"></div>
+      <div class="popup wait" id="hud-wait"></div>
     </div>
+
+    <!-- div for the game itself -->
     <div class="grid">
       <div class="canvas">
         <canvas id="connect-4-canvas" ></canvas>
@@ -124,6 +128,8 @@
       <div class="timer client" id="client-timer"> </div>
       <div class="timer server" id="server-timer"> </div>
     </div>
+
+    <!-- rust/wasm point of entry -->
     <script src="./bootstrap.js"></script>
   </body>
 </html>
