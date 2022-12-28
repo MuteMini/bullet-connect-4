@@ -1,4 +1,4 @@
 .lock
 /client/site/node_modules
 /client/site/dist
-/client/target
+*/target
