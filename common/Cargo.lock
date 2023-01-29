@@ -3,7 +3,7 @@
 version = 3
 
 [[package]]
-name = "common"
+name = "bullet-common"
 version = "0.1.0"
 dependencies = [
  "serde",

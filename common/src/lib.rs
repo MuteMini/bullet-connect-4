@@ -1,16 +1,43 @@
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
-//Distinguishes PlayerIDs to numbers
-type PlayerId = u64;
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ClientMessage {
+    CreateRoom{ player_name: String },
+    JoinRoom{ room_uuid: String, player_name: String },
 
-//What state the game itself could be in
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Stage {
-    PreGame,
-    InGame,
-    Ended,
+    PlaceToken{ col: usize },
+    BeginGame,
+
+    //Chat{ message: String },
+    Disconnected,
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ServerMessage {
+    CreateFailed,
+    JoinSuccess {
+
+    },
+    JoinFailed,
+    PlayerConnect{},
+    PlayerDisconnect{},
+    BeginGame,
+
+    PlayerTurn{ id: usize },
+    PlayerTime{ time_left: Vec<i32> },
+    
+    PlaceToken{ id: usize, col: usize },
+    PlaceFailed,
+
+    WonGame{ winner: usize },
+
+    //Chat {}
+}
+
+
+
+
+////////////////////////////////////////////////////////////////////////////
 
 //What token the board could place
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -20,113 +47,88 @@ pub enum Token {
     Yellow,
 }
 
-//All important information about a player
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Player {
-    pub name: String,
-    pub token: Token,
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Game {
+    pub tokens: Vec<Token>,
 }
 
-//All events that progresses the game
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum GameEvent {
-    BeginGame { goes_first: PlayerId },
-    WonGame { winner: PlayerId },
-    PlayerJoined { player_id: PlayerId, name: String },
-    PlayerLeft { player_id: PlayerId },
-    PlaceToken { player_id: PlayerId, col: usize },
-}
+impl Game {
+    // Board width and height. 
+    // Easily adjustable and will also change the canvas size accordingly.
+    pub const WIDTH: u32 = 7;
+    pub const HEIGHT: u32 = 6;
 
-//Holds the current state of the game
-pub struct GameState {
-    pub stage: Stage,
-    pub board: Vec<Token>,
-    pub active_player: PlayerId,
-    pub players: HashMap<PlayerId, Player>,
-    pub history: Vec<GameEvent>,
-}
+    pub fn check_win( &self, row: u32, col: u32 ) -> bool {       
+        // Bits represent each direction's # of connected tokens.
+        let mut concur_cnt: [u8; 4] = [1; 4];
 
-//Default object for a game state
-impl Default for GameState {
-    fn default() -> Self {
-        let width = 7;
-        let height = 6;
+        // Each bit represents if the direction should be explored or not.
+        // From lelf to right, 0b[NW][N][NE][E]_[SE][S][SW][W]
+        let mut concur_stop: u8 = 0b11111111;
 
-        Self {
-            stage: Stage::PreGame,
-            board: vec![Token::Empty; (width*height) as usize],
-            active_player: 0,
-            players: HashMap::new(),
-            history: Vec::new(),
-        }
-    }
-}
+        // The token we are checking that someone has won from.
+        let cur_tok = self.tokens[ Self::get_index( row, col ) ];
 
-/*
-impl GameState {
+        // Moves a difference of 1 to 3 moves away from each direction.m km njjolk,
+        for diff in 1..=3 {
+            for dir in 0..8 {
+                let mask = 0b1 << dir;
 
-    //This function assumes the GameEvent being passed through is valid.
-    fn validate( &self, event: &GameEvent ) -> bool {
-        use GameEvent::*;
+                // If the direction should be explored,
+                if concur_stop & mask != 0 { 
 
-        match event {
-            BeginGame { goes_first: PlayerId },
-            WonGame { winner: PlayerId },
-            PlayerJoined { player_id: PlayerId, name: String },
-            PlayerLeft { player_id: PlayerId },
-            PlaceToken { player_id: PlayerId, xPos: usize },
+                    let mut row_check = row as i32;
+                    let mut col_check = col as i32;
 
-            PlayerJoined { player_id, name } => {
-                if self.players.contains_key(player_id) {
-                    return false;
+                    // Finds the row and column to check.
+                    match dir {
+                        0..=2 => row_check += diff,
+                        4..=6 => row_check -= diff,
+                        _ => {},
+                    }
+                    match dir {
+                        0 | 6 | 7 => col_check -= diff,
+                        2..=4     => col_check += diff,
+                        _ => {},
+                    }
+
+                    // If the position is invalid or the token at the position is not what we are checking,
+                    // Do not explore this direction any further.
+                    if (row_check < 0 || row_check >= Self::HEIGHT as i32)
+                            || (col_check < 0 || col_check >= Self::WIDTH as i32) 
+                            || self.tokens[ Self::get_index(row_check as u32, col_check as u32) ] != cur_tok 
+                    {
+                        concur_stop &= !(mask);
+                    }
+                    // Else, this direction has the token we are checking.
+                    else 
+                    {
+                        concur_cnt[dir % 4] += 1;
+                    }
+                }
+            }
+
+            // Counts how much tokens are in each direction. 
+            // If there is at least four tokens in that direction => someone has won the game.
+            for count in concur_cnt {
+                if count >= 4 {
+                    return true;
                 }
             }
         }
 
-        true
+        false
     }
 
-    //This function assumes the event being passed through is valid.
-    //This will take the event and update the GameState accordingly.
-    fn reduce( &mut self, valid_event: &GameEvent ) {
-        use GameEvent::*;
-        match valid_event {
-            BeginGame { goes_first } => {
-                self.active_player = goes_first;
-                self.stage = Stage::InGame;
-            }
-            WonGame { winner } => {
-                self.stage = Stage::Ended;
-            }
-            PlayerJoined { player_id, name } => {
-                self.players.insert(
-                    player_id,
-                    Player {
-                        name: name.to_string(),
-                        //First player gets red, second gets yellow.
-                        token: if self.players.len() > 0 {
-                            Token::Red
-                        } else {
-                            Tile::Yellow
-                        },
-                    },
-                );
-            }
-            PlayerLeft { player_id: PlayerId }
-            PlaceToken { player_id: PlayerId, xPos: usize },
-        }
-
-        self.history.push(valid_event.clone());
-    }
-
-    //Checks if the event is valid: if it is, reduce. If not, return an error result.
-    pub fn dispatch( &mut self, event: &GameEvent ) -> Result<(), ()> {
-        if !self.validate(event) {
-            return Err(());
-        }
-
-        self.reduce(event);
-        return Ok(());
+    pub fn get_index( row: u32, col: u32 ) -> usize {
+        (row*Self::WIDTH + col) as usize
     }
 }
-*/
+
+impl Default for Game {
+    fn default() -> Self {
+        Self {
+            tokens: vec![Token::Empty; (Self::WIDTH*Self::HEIGHT) as usize],
+        }
+    }
+}
